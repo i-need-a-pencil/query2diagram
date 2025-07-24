@@ -1,0 +1,18 @@
+{
+  "diagrams_alpaca": {
+    "file_name": "diagrams_alpaca.json",
+    "columns": {
+      "prompt": "instruction",
+      "response": "output",
+      "system": "system"
+    }
+  },
+  "diagrams_alpaca_eval": {
+    "file_name": "diagrams_alpaca_eval.json",
+    "columns": {
+      "prompt": "instruction",
+      "response": "output",
+      "system": "system"
+    }
+  }
+}

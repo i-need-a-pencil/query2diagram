@@ -1,0 +1,54 @@
+### model
+model_name_or_path: ./datasets/Qwen2.5-Coder-14B-Instruct-bnb-4bit/
+quantization_bit: 4
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_target: ["q_proj", "k_proj", "v_proj", "o_proj", "down_proj", "up_proj", "gate_proj"]
+lora_rank: 64
+lora_alpha: 64
+lora_dropout: 0.05
+
+### dataset
+dataset_dir: ./datasets/training
+dataset: diagrams_alpaca
+template: qwen
+cutoff_len: 100000
+max_samples: 100000
+overwrite_cache: true
+preprocessing_num_workers: 64
+# disable_shuffling: true
+
+### output
+output_dir: ./datasets/finetuned_model
+logging_steps: 1
+save_strategy: steps
+save_steps: 1
+plot_loss: true
+overwrite_output_dir: true
+
+### train
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 32
+learning_rate: 3.0e-4
+max_steps : 24 # 8 ep
+lr_scheduler_type: cosine
+warmup_ratio: 0.0
+fp16: true
+ddp_timeout: 180000000
+weight_decay: 1.e-7
+ddp_find_unused_parameters: false
+use_unsloth: true
+use_unsloth_gc: true
+
+## logging
+report_to: mlflow
+run_name: finetuned_model
+
+### eval
+eval_dataset: diagrams_alpaca_eval
+per_device_eval_batch_size: 2
+eval_strategy: steps
+eval_steps: 1
