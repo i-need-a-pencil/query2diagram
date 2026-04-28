@@ -1,26 +1,29 @@
 # Query2Diagram: Answering Developer Queries with UML Diagrams
 
-
 Research code + data for **“Query2Diagram: Answering Developer Queries with UML Diagrams”** (arXiv:2604.23816).
 
 **What it does**
 Given:
+
 - a code snippet (usually one file), and
 - a natural-language developer query,
 
 Query2Diagram generates a **focused UML-like diagram** as a **structured JSON graph** (`nodes`, `edges`, `packages`). The graph can be validated and converted to **PlantUML** (or Mermaid) for rendering.
 
-Paper: [Query2Diagram: Answering Developer Queries with UML Diagrams](https://arxiv.org/abs/2604.23816)
-Diagram annotation interface: [arboreal](https://github.com/i-need-a-pencil/arboreal).
+**Paper:** [Query2Diagram: Answering Developer Queries with UML Diagrams](https://arxiv.org/abs/2604.23816)\
+**HuggingFace Papers:** [Query2Diagram: Answering Developer Queries with UML Diagrams](https://huggingface.co/papers/2604.23816)\
+**Diagram annotation interface:** [arboreal](https://github.com/i-need-a-pencil/arboreal)
 
 ---
 
 ## Quickstart (Docker-only)
 
 ### 0) Prereqs
+
 - Docker + NVIDIA Container Toolkit (for `--gpus all`)
 
 ### 1) Build the image
+
 From repo root:
 
 ```bash
@@ -28,6 +31,7 @@ docker build -t query2diagram .
 ```
 
 ### 2) Start a container (recommended: mount repo + HF cache)
+
 This keeps your outputs (in `./datasets`) and model downloads cached across runs:
 
 ```bash
@@ -48,18 +52,20 @@ Query2Diagram expects an **OpenAI-compatible** endpoint at `http://127.0.0.1:800
 This repo uses **vLLM**.
 
 ### A) Fine-tuned inference (LoRA) — recommended
-1) Start vLLM with LoRA enabled:
+
+1. Start vLLM with LoRA enabled:
 
 ```bash
 bash scripts/serve.sh
 ```
 
 This serves:
+
 - base model: `Qwen2.5-Coder-14B-Instruct-bnb-4bit`
 - LoRA adapter: `./datasets/finetuned_model`
 - model name exposed to clients: `finetuned_model`
 
-2) In a **second terminal**, run generation:
+2. In a **second terminal**, run generation:
 
 ```bash
 # on host:
@@ -68,13 +74,15 @@ docker exec -it <container> bash -lc "python3.12 q2d/generation/generate_diagram
 ```
 
 Outputs:
+
 - reads: `./datasets/test.json`
 - writes: `./datasets/finetuned_model.json`
 
 ### B) Baseline inference (no LoRA)
+
 If you don’t have `./datasets/finetuned_model` yet:
 
-1) Start vLLM **without** LoRA (run directly instead of `scripts/serve.sh`):
+1. Start vLLM **without** LoRA (run directly instead of `scripts/serve.sh`):
 
 ```bash
 vllm serve \
@@ -87,13 +95,14 @@ vllm serve \
   Qwen2.5-Coder-14B-Instruct-bnb-4bit
 ```
 
-2) Generate:
+2. Generate:
 
 ```bash
 python3.12 q2d/generation/generate_diagrams_local.py
 ```
 
 Outputs:
+
 - reads: `./datasets/test.json`
 - writes: `./datasets/Qwen_base.json`
 
@@ -104,25 +113,30 @@ Outputs:
 Training uses **LLaMA-Factory** and writes the adapter to `./datasets/finetuned_model`.
 
 ### 1) Convert dataset → Alpaca JSON
+
 ```bash
 python3.12 q2d/training/to_alpaca.py
 ```
 
 Writes:
+
 - `./datasets/training/diagrams_alpaca.json`
 - `./datasets/training/diagrams_alpaca_eval.json`
 
 ### 2) Run LoRA SFT
+
 ```bash
 llamafactory-cli train q2d/training/llama3_lora_sft.yaml
 ```
 
 Output (LoRA adapter directory):
+
 - `./datasets/finetuned_model`
 
 > Note: `scripts/train.sh` points to `./training/llama3_lora_sft.yaml` (a path that doesn’t exist in this repo). Prefer the command above.
 
 ### 3) Serve + infer
+
 ```bash
 bash scripts/serve.sh
 python3.12 q2d/generation/generate_diagrams_local_finetuned.py
@@ -135,34 +149,42 @@ python3.12 q2d/generation/generate_diagrams_local_finetuned.py
 The mining pipeline lives in `q2d/datasets/*`.
 
 ### 1) Create a repo list
+
 Create `./datasets/top_150.csv` with a `repo` column containing git URLs.
 
 ### 2) Download repos
+
 ```bash
 python3.12 -m q2d.datasets.download_utils
 ```
 
 Clones into:
+
 - `./datasets/diagrams-repos/<owner>/<repo>`
 
 ### 3) Extract files
+
 ```bash
 python3.12 -m q2d.datasets.extract_files
 ```
 
 Writes:
+
 - `./datasets/extracted_files.json`
 
 ### 4) Filter + deduplicate + sample
+
 ```bash
 python3.12 -m q2d.datasets.filter
 ```
 
 Writes:
+
 - `./datasets/deduped.json`
 - `./datasets/sampled.json`
 
 ### 5) (Optional) Generate developer queries
+
 ```bash
 python3.12 q2d/generation/generate_questions_r1.py
 # or
@@ -170,6 +192,7 @@ python3.12 q2d/generation/generate_questions_qwq.py
 ```
 
 Writes:
+
 - `./datasets/questions_r1.json` / `./datasets/questions_qwq.json`
 
 > These scripts are meant to be edited for your own model endpoint + model name.
@@ -179,14 +202,17 @@ Writes:
 ## Formats
 
 ### Graph JSON schema (authoritative)
+
 See: `q2d/common/types.py`
 
 The model outputs a `Graph`:
+
 - `nodes`: classes / functions / variables / fields / methods
 - `edges`: directed relationships
 - `packages`: grouping / nesting
 
 ### Common dataset record shape
+
 Most scripts operate on items like:
 
 ```json
@@ -206,9 +232,11 @@ Most scripts operate on items like:
 ## Validate + render
 
 ### Validate graphs
+
 - `q2d/checker.py` — structural validation + defect analysis for generated graphs
 
 ### Convert Graph JSON → diagram syntax
+
 - `q2d/graph_to_plantuml.py` — converts graphs to:
   - PlantUML (`@startuml ... @enduml`)
   - Mermaid (class diagram + flowchart templates)
@@ -220,16 +248,19 @@ Rendering is external (PlantUML / Mermaid).
 ## Key entrypoints (what to run)
 
 Inference:
+
 - `q2d/generation/generate_diagrams_local_finetuned.py` — diagram generation via vLLM + LoRA (`finetuned_model`)
 - `q2d/generation/generate_diagrams_local.py` — baseline generation via vLLM (no LoRA)
 - `scripts/serve.sh` — starts vLLM server (OpenAI-compatible) with LoRA enabled
 
 Training:
+
 - `q2d/training/to_alpaca.py` — converts dataset JSON → Alpaca JSON for LLaMA-Factory
 - `q2d/training/llama3_lora_sft.yaml` — LoRA SFT configuration
 - `scripts/train.sh` — convenience wrapper (path may require fixing)
 
 Data collection:
+
 - `q2d/datasets/download_utils.py` — clones repos from `datasets/top_150.csv`
 - `q2d/datasets/extract_files.py` — extracts source files into JSON
 - `q2d/datasets/filter.py` — filters, dedupes, samples to target size
